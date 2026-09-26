@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="dev.codex.pockethearts">
+    <uses-sdk android:minSdkVersion="22" android:targetSdkVersion="22" />
+    <application android:allowBackup="false" android:icon="@drawable/icon" android:label="Pocket Hearts" android:theme="@android:style/Theme.Material.NoActionBar">
+        <activity android:name=".MainActivity" android:screenOrientation="portrait" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
