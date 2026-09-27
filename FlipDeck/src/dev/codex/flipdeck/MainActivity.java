@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Canvas;
@@ -19,7 +20,6 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
-import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.media.ExifInterface;
@@ -44,10 +44,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 
-public final class MainActivity extends Activity {
+public class MainActivity extends Activity {
     private DeckView deck;
     private final ArrayList<AppEntry> apps=new ArrayList<AppEntry>();
-    private static final int HOME=0, ALL=1, TOOLS=2, PHOTO=3;
+    protected static final int HOME=0, ALL=1, TOOLS=2, PHOTO=3;
     private static final int BG=Color.rgb(12,25,34);
     private static final int PANEL=Color.argb(165,25,46,57);
     private static final int PANEL2=Color.argb(158,31,58,69);
@@ -76,27 +76,43 @@ public final class MainActivity extends Activity {
         getWindow().setNavigationBarColor(BG);
         deck=new DeckView(this);
         setContentView(deck);
-        wallpaperMode=getPreferences(0).getInt("wallpaper_mode",0);
+        restoreWallpaperMode();
         loadWallpaper();
-        deck.page=PHOTO;
+        deck.page=initialPage();
         refreshApps();
     }
 
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if(deck!=null) {deck.page=PHOTO;deck.selected=0;deck.invalidate();}
-        if(intent!=null && intent.hasCategory(Intent.CATEGORY_HOME)) RecentsService.showRecents();
+        if(deck!=null) {deck.page=initialPage();deck.selected=0;deck.invalidate();}
     }
 
     @Override protected void onResume() {
         super.onResume();
         refreshApps();
-        if(wallpaperMode==0) loadWallpaper();
+        wallpaperMode=wallpaperPreferences().getInt("wallpaper_mode",0);
+        loadWallpaper();
         if(deck!=null) deck.invalidate();
     }
 
     @Override public void onBackPressed() {
         if(deck.page!=PHOTO) {deck.page=PHOTO;deck.selected=0;deck.invalidate();}
+    }
+
+    protected int initialPage() {return PHOTO;}
+
+    private SharedPreferences wallpaperPreferences() {
+        return getSharedPreferences("flipdeck_wallpaper",MODE_PRIVATE);
+    }
+
+    private void restoreWallpaperMode() {
+        SharedPreferences preferences=wallpaperPreferences();
+        if(!preferences.contains("wallpaper_mode")) {
+            File saved=new File(getFilesDir(),"wallpaper.jpg");
+            int oldMode=saved.isFile()?1:getPreferences(MODE_PRIVATE).getInt("wallpaper_mode",0);
+            preferences.edit().putInt("wallpaper_mode",oldMode).apply();
+        }
+        wallpaperMode=preferences.getInt("wallpaper_mode",0);
     }
 
     private void refreshApps() {
@@ -136,6 +152,11 @@ public final class MainActivity extends Activity {
     private void openPhone() {
         if(!launchIntent(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:")))) unavailable("Phone");
     }
+    private void dialFromKey(int code) {
+        String digit=code==KeyEvent.KEYCODE_STAR?"*":code==KeyEvent.KEYCODE_POUND?"#":
+            String.valueOf((char)('0'+code-KeyEvent.KEYCODE_0));
+        if(!launchIntent(new Intent(Intent.ACTION_DIAL,Uri.fromParts("tel",digit,null)))) unavailable("Phone");
+    }
     private void openMail() {
         boolean ok=launchPackage("jp.co.sharp.android.messaging");
         if(!ok) ok=launchIntent(new Intent(Intent.ACTION_SENDTO,Uri.parse("smsto:")));
@@ -152,7 +173,8 @@ public final class MainActivity extends Activity {
         if(!ok) unavailable("Browser");
     }
     private void openCamera() {
-        boolean ok=launchPackage("jp.co.sharp.android.camera");
+        boolean ok=launchPackage("dev.codex.flipcam");
+        if(!ok) ok=launchPackage("jp.co.sharp.android.camera");
         if(!ok) ok=launchIntent(new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA));
         if(!ok) unavailable("Camera");
     }
@@ -171,17 +193,23 @@ public final class MainActivity extends Activity {
 
     private void wallpaperMenu() {
         new AlertDialog.Builder(this).setTitle("Wallpaper")
-            .setItems(new String[]{"Choose a photo","Use phone wallpaper","No photo"},
+            .setItems(new String[]{"Choose photo (phone / SD)","Use phone wallpaper","No photo"},
                 new android.content.DialogInterface.OnClickListener() {
                     @Override public void onClick(android.content.DialogInterface dialog,int which) {
                         if(which==0) {
-                            Intent pick=new Intent(Intent.ACTION_GET_CONTENT);
+                            Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);
                             pick.setType("image/*");pick.addCategory(Intent.CATEGORY_OPENABLE);
-                            try {startActivityForResult(Intent.createChooser(pick,"Choose a photo"),PICK_WALLPAPER);}
-                            catch(ActivityNotFoundException e) {unavailable("Photo picker");}
+                            pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            try {startActivityForResult(pick,PICK_WALLPAPER);}
+                            catch(ActivityNotFoundException e) {
+                                Intent fallback=new Intent(Intent.ACTION_GET_CONTENT);
+                                fallback.setType("image/*");fallback.addCategory(Intent.CATEGORY_OPENABLE);
+                                try {startActivityForResult(fallback,PICK_WALLPAPER);}
+                                catch(ActivityNotFoundException missing) {unavailable("Photo picker");}
+                            }
                         } else {
                             wallpaperMode=which==1?0:2;
-                            getPreferences(0).edit().putInt("wallpaper_mode",wallpaperMode).apply();
+                            wallpaperPreferences().edit().putInt("wallpaper_mode",wallpaperMode).apply();
                             loadWallpaper();
                         }
                     }
@@ -216,7 +244,7 @@ public final class MainActivity extends Activity {
             FileOutputStream saved=new FileOutputStream(new File(getFilesDir(),"wallpaper.jpg"));
             photo.compress(Bitmap.CompressFormat.JPEG,88,saved);saved.close();photo.recycle();
             wallpaperMode=1;
-            getPreferences(0).edit().putInt("wallpaper_mode",1).apply();
+            wallpaperPreferences().edit().putInt("wallpaper_mode",1).apply();
             loadWallpaper();
             deck.page=PHOTO;deck.selected=0;deck.invalidate();
         } catch(Exception e) {
@@ -283,22 +311,29 @@ public final class MainActivity extends Activity {
         int page=HOME,selected=0;
         DeckView(Context c) {super(c);setFocusable(true);setFocusableInTouchMode(true);requestFocus();}
 
+        private RectF fittedBounds(int width,int height,int areaWidth,int areaHeight) {
+            if(width<=0 || height<=0) return new RectF(0,0,areaWidth,areaHeight);
+            float scale=Math.min((float)areaWidth/width,(float)areaHeight/height);
+            float displayWidth=width*scale,displayHeight=height*scale;
+            return new RectF((areaWidth-displayWidth)/2,(areaHeight-displayHeight)/2,
+                (areaWidth+displayWidth)/2,(areaHeight+displayHeight)/2);
+        }
+
         @Override protected void onDraw(Canvas actual) {
             super.onDraw(actual);
+            actual.drawColor(BG);
+            if(customWallpaper!=null) {
+                p.setColor(Color.WHITE);p.setFilterBitmap(true);
+                actual.drawBitmap(customWallpaper,null,
+                    fittedBounds(customWallpaper.getWidth(),customWallpaper.getHeight(),getWidth(),getHeight()),p);
+            } else if(phoneWallpaper!=null) {
+                RectF bounds=fittedBounds(phoneWallpaper.getIntrinsicWidth(),phoneWallpaper.getIntrinsicHeight(),getWidth(),getHeight());
+                phoneWallpaper.setBounds(Math.round(bounds.left),Math.round(bounds.top),
+                    Math.round(bounds.right),Math.round(bounds.bottom));
+                phoneWallpaper.draw(actual);
+            }
             Canvas c=actual;
             c.save();c.scale(getWidth()/360f,getHeight()/560f);
-            c.drawColor(BG);
-            if(customWallpaper!=null) {
-                int bw=customWallpaper.getWidth(),bh=customWallpaper.getHeight();
-                float desired=360f/560f,ratio=(float)bw/bh;
-                Rect source;
-                if(ratio>desired) {int width=(int)(bh*desired);source=new Rect((bw-width)/2,0,(bw+width)/2,bh);}
-                else {int height=(int)(bw/desired);source=new Rect(0,(bh-height)/2,bw,(bh+height)/2);}
-                p.setColor(Color.WHITE);c.drawBitmap(customWallpaper,source,new RectF(0,0,360,560),p);
-            } else if(phoneWallpaper!=null) {
-                phoneWallpaper.setBounds(0,0,360,560);
-                phoneWallpaper.draw(c);
-            }
             if(customWallpaper!=null || phoneWallpaper!=null) {
                 p.setColor(Color.argb(page==PHOTO?43:73,4,15,22));c.drawRect(0,0,360,560,p);
             }
@@ -322,8 +357,8 @@ public final class MainActivity extends Activity {
             text(c,date.toUpperCase(Locale.getDefault()),20,119,13,MUTED,true,Paint.Align.LEFT);
             status(c);
             grid(c,HOME_LABELS);
-            text(c,"0  TOOLS",18,540,12,ORANGE,true,Paint.Align.LEFT);
-            text(c,"#  ALL APPS",342,540,12,MINT,true,Paint.Align.RIGHT);
+            text(c,"MENU  TOOLS",18,540,12,ORANGE,true,Paint.Align.LEFT);
+            text(c,"OK  OPEN",342,540,12,MINT,true,Paint.Align.RIGHT);
         }
 
         private void drawPhoto(Canvas c) {
@@ -343,16 +378,16 @@ public final class MainActivity extends Activity {
                 c.drawRoundRect(x,463,x+102,521,12,12,p);
                 text(c,dock[i],x+51,498,15,selected==i?BG:WHITE,true,Paint.Align.CENTER);
             }
-            text(c,"*  GRID 1–9",18,544,11,ORANGE,true,Paint.Align.LEFT);
-            text(c,"#  ALL APPS",342,544,11,MINT,true,Paint.Align.RIGHT);
+            text(c,"UP  GRID",18,544,11,ORANGE,true,Paint.Align.LEFT);
+            text(c,"OK  OPEN",342,544,11,MINT,true,Paint.Align.RIGHT);
         }
 
         private void drawTools(Canvas c) {
-            sectionHeader(c,"QUICK TOOLS","0 / MENU TO RETURN");
+            sectionHeader(c,"QUICK TOOLS","MENU TO RETURN");
             status(c);
             grid(c,TOOL_LABELS);
-            text(c,"*  HOME",18,540,12,ORANGE,true,Paint.Align.LEFT);
-            text(c,"#  ALL APPS",342,540,12,MINT,true,Paint.Align.RIGHT);
+            text(c,"BACK  PHOTO",18,540,12,ORANGE,true,Paint.Align.LEFT);
+            text(c,"OK  OPEN",342,540,12,MINT,true,Paint.Align.RIGHT);
         }
 
         private void sectionHeader(Canvas c,String title,String sub) {
@@ -396,7 +431,6 @@ public final class MainActivity extends Activity {
                 int ink=focus?BG:WHITE;
                 if(page==TOOLS) toolIcon(c,i,x+12,y+18,focus?BG:(i==8?MINT:ORANGE));
                 else icon(c,i,x+12,y+18,focus?BG:(i==8?MINT:ORANGE));
-                text(c,String.valueOf(i+1),x+cellW-12,y+23,12,focus?BG:MUTED,true,Paint.Align.RIGHT);
                 String label=labels[i];
                 int size=label.length()>10?11:13;
                 text(c,label,x+11,y+82,size,ink,true,Paint.Align.LEFT);
@@ -424,9 +458,8 @@ public final class MainActivity extends Activity {
                 p.setTextSize(17);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
                 String label=fit(entry.label,239);
                 text(c,label,77,y+36,17,focus?BG:WHITE,true,Paint.Align.LEFT);
-                text(c,String.valueOf(index+1),329,y+34,11,focus?BG:MUTED,true,Paint.Align.RIGHT);
             }
-            text(c,"*  HOME",18,540,12,ORANGE,true,Paint.Align.LEFT);
+            text(c,"BACK  PHOTO",18,540,12,ORANGE,true,Paint.Align.LEFT);
             text(c,"UP / DOWN  BROWSE",342,540,12,MINT,true,Paint.Align.RIGHT);
         }
 
@@ -517,6 +550,11 @@ public final class MainActivity extends Activity {
         }
 
         @Override public boolean onKeyDown(int code,KeyEvent event) {
+            if((code>=KeyEvent.KEYCODE_0 && code<=KeyEvent.KEYCODE_9) ||
+                code==KeyEvent.KEYCODE_STAR || code==KeyEvent.KEYCODE_POUND) {
+                if(event.getRepeatCount()==0) dialFromKey(code);
+                return true;
+            }
             if(code==KeyEvent.KEYCODE_F1) {if(event.getRepeatCount()==0) openMail();return true;}
             if(code==KeyEvent.KEYCODE_F2) {if(event.getRepeatCount()==0) openBrowser();return true;}
             if(code==KeyEvent.KEYCODE_F3) {page=ALL;selected=0;refreshApps();invalidate();return true;}
@@ -527,25 +565,17 @@ public final class MainActivity extends Activity {
                 if(code==KeyEvent.KEYCODE_DPAD_RIGHT) {selected=Math.min(2,selected+1);invalidate();return true;}
                 if(code==KeyEvent.KEYCODE_DPAD_UP) {page=HOME;selected=0;invalidate();return true;}
                 if(code==KeyEvent.KEYCODE_DPAD_DOWN) {if(event.getRepeatCount()==0) openContacts();return true;}
-                if(code>=KeyEvent.KEYCODE_1 && code<=KeyEvent.KEYCODE_9) {
-                    if(event.getRepeatCount()==0) openHome(code-KeyEvent.KEYCODE_1);return true;
-                }
             }
             if(code==KeyEvent.KEYCODE_DPAD_UP) {selected=Math.max(0,selected-(page==ALL?1:3));invalidate();return true;}
             if(code==KeyEvent.KEYCODE_DPAD_DOWN) {selected=Math.min((page==ALL?apps.size():9)-1,selected+(page==ALL?1:3));invalidate();return true;}
             if(code==KeyEvent.KEYCODE_DPAD_LEFT) {selected=Math.max(0,selected-(page==ALL?6:1));invalidate();return true;}
             if(code==KeyEvent.KEYCODE_DPAD_RIGHT) {selected=Math.min((page==ALL?apps.size():9)-1,selected+(page==ALL?6:1));invalidate();return true;}
-            if(code==KeyEvent.KEYCODE_DPAD_CENTER || code==KeyEvent.KEYCODE_ENTER || code==KeyEvent.KEYCODE_5 && page==ALL) {
+            if(code==KeyEvent.KEYCODE_DPAD_CENTER || code==KeyEvent.KEYCODE_ENTER) {
                 if(event.getRepeatCount()==0) activate();return true;
             }
-            if(code>=KeyEvent.KEYCODE_1 && code<=KeyEvent.KEYCODE_9 && page!=ALL) {
-                if(event.getRepeatCount()==0) {selected=code-KeyEvent.KEYCODE_1;activate();}return true;
-            }
-            if(code==KeyEvent.KEYCODE_0 || code==KeyEvent.KEYCODE_MENU) {
+            if(code==KeyEvent.KEYCODE_MENU) {
                 page=page==TOOLS?HOME:TOOLS;selected=0;invalidate();return true;
             }
-            if(code==KeyEvent.KEYCODE_POUND) {page=ALL;selected=0;refreshApps();invalidate();return true;}
-            if(code==KeyEvent.KEYCODE_STAR) {page=page==HOME?PHOTO:HOME;selected=0;invalidate();return true;}
             if(code==KeyEvent.KEYCODE_BACK) {page=PHOTO;selected=0;invalidate();return true;}
             return super.onKeyDown(code,event);
         }

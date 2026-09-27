@@ -12,7 +12,7 @@ $apk=Join-Path $dist 'Pocket-Music-NP601SH.apk'
 $key=Join-Path (Split-Path $root -Parent) 'pocket-hearts.keystore'
 
 if(!(Test-Path $android) -or !(Test-Path $tools)) {throw 'Android SDK packages are missing in ../.tools'}
-if(!(Test-Path $key)) {throw 'Signing key missing. Build ../Pocket Hearts first with ../Build.ps1'}
+if(!(Test-Path $key)) {throw 'Signing key missing. Build ../Pocket Hearts/Build.ps1 first'}
 New-Item -ItemType Directory -Force $build,$dist,(Join-Path $build 'gen'),(Join-Path $build 'classes'),(Join-Path $build 'dex') | Out-Null
 
 & (Join-Path $tools 'aapt.exe') package -f -m -J (Join-Path $build 'gen') -M (Join-Path $root 'AndroidManifest.xml') -S (Join-Path $root 'res') -I $android -F (Join-Path $build 'unsigned.apk')

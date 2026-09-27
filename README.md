@@ -1,23 +1,10 @@
-# Pocket Hearts สำหรับ SHARP NP601SH
+# Flip Phone apps for SHARP NP601SH
 
-> แอพเพลงและทางลัด Bluetooth อยู่ใน [`PocketMusic`](PocketMusic/README.md)
-> Launcher ใหม่อยู่ใน [`FlipDeck`](FlipDeck/README.md)
+Each app has its own source, build script, README, and APK output:
 
-เกมรับหัวใจขนาดเล็กสำหรับมือถือฝาพับ Android 5.1.1 เล่นออฟไลน์และไม่ขอสิทธิ์ใด ๆ
+- [Pocket Hearts](Pocket%20Hearts/README.md) — offline game
+- [FlipDeck](FlipDeck/README.md) — launcher
+- [FlipCam](FlipCam/README.md) — camera
+- [PocketMusic](PocketMusic/README.md) — music and Bluetooth tools
 
-- กด **4 / ซ้าย** และ **6 / ขวา** เพื่อเลื่อนถาดรับหัวใจ
-- กด **5 / OK** เพื่อเริ่ม หยุดพัก หรือเล่นใหม่
-- รับหัวใจสีทองได้ 3 คะแนน พลาดครบ 3 ดวงจบเกม
-- คะแนนสูงสุดบันทึกไว้ในเครื่อง
-
-ไฟล์ติดตั้ง: [`dist/Pocket-Hearts-NP601SH.apk`](dist/Pocket-Hearts-NP601SH.apk)
-
-## สร้างและติดตั้งใหม่
-
-ต้องมี JDK, Android SDK `platforms;android-22`, `build-tools;30.0.3` และ `platform-tools` ใน `.tools` จากนั้นเรียก:
-
-```powershell
-.\Build.ps1 -Install
-```
-
-ถ้าไม่ต้องการติดตั้ง ให้เรียก `.\Build.ps1` เฉย ๆ แอพใช้ Java และ Android Canvas โดยไม่มีไลบรารีภายนอก
+The apps share the Android SDK in `.tools` and the signing key `pocket-hearts.keystore` in this directory. Build an app by running its `Build.ps1` from its own folder. The signing key is created by the Pocket Hearts build if it does not exist.

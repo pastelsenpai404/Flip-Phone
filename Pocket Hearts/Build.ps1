@@ -2,13 +2,14 @@ param([switch]$Install)
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
-$sdk = Join-Path $root '.tools'
+$shared = Split-Path $root -Parent
+$sdk = Join-Path $shared '.tools'
 $buildTools = Join-Path $sdk 'build-tools\30.0.3'
 $platform = Join-Path $sdk 'platforms\android-22\android.jar'
 $adb = Join-Path $sdk 'platform-tools\adb.exe'
 $build = Join-Path $root 'build'
 $dist = Join-Path $root 'dist'
-$keystore = Join-Path $root 'pocket-hearts.keystore'
+$keystore = Join-Path $shared 'pocket-hearts.keystore'
 $apk = Join-Path $dist 'Pocket-Hearts-NP601SH.apk'
 
 if (!(Test-Path $platform) -or !(Test-Path $buildTools)) {
