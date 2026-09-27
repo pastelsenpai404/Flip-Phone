@@ -1,5 +1,8 @@
 # Pocket Hearts สำหรับ SHARP NP601SH
 
+> แอพเพลงและทางลัด Bluetooth อยู่ใน [`PocketMusic`](PocketMusic/README.md)
+> Launcher ใหม่อยู่ใน [`FlipDeck`](FlipDeck/README.md)
+
 เกมรับหัวใจขนาดเล็กสำหรับมือถือฝาพับ Android 5.1.1 เล่นออฟไลน์และไม่ขอสิทธิ์ใด ๆ
 
 - กด **4 / ซ้าย** และ **6 / ขวา** เพื่อเลื่อนถาดรับหัวใจ
