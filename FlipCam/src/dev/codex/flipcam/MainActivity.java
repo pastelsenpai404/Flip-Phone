@@ -48,8 +48,8 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     private File recording;
     private boolean surfaceReady,resumed,recordingVideo,takingPicture,flash,showGrid=true;
     private int mode=0,timer=0;
-    private boolean manual;
-    private String iso="auto",whiteBalance="auto",focus="auto",scene="auto",pictureSize="";
+    private boolean manual,aeLock,awbLock;
+    private String iso="auto",whiteBalance="auto",focus="auto",scene="auto",pictureSize="",metering="center-weighted";
     private int ev=0,jpegQuality=90,contrast=5,saturation=5,sharpness=12,videoQuality=CamcorderProfile.QUALITY_480P;
     private long recordingStart;
     private final Runnable pendingPhoto=new Runnable(){@Override public void run(){takePhoto();}};
@@ -75,11 +75,14 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     private void loadPreferences() {
         SharedPreferences pref=getPreferences(0);
         manual=pref.getBoolean("manual",false);
+        aeLock=pref.getBoolean("aeLock",false);
+        awbLock=pref.getBoolean("awbLock",false);
         iso=pref.getString("iso","auto");
         whiteBalance=pref.getString("whiteBalance","auto");
         focus=pref.getString("focus","auto");
         scene=pref.getString("scene","auto");
         pictureSize=pref.getString("pictureSize","");
+        metering=pref.getString("metering","center-weighted");
         ev=pref.getInt("ev",0);
         jpegQuality=pref.getInt("jpegQuality",90);
         contrast=pref.getInt("contrast",5);
@@ -90,7 +93,8 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     }
 
     private void savePreferences() {
-        getPreferences(0).edit().putBoolean("manual",manual).putString("iso",iso)
+        getPreferences(0).edit().putBoolean("manual",manual).putBoolean("aeLock",aeLock)
+            .putBoolean("awbLock",awbLock).putString("metering",metering).putString("iso",iso)
             .putString("whiteBalance",whiteBalance).putString("focus",focus)
             .putString("scene",scene).putString("pictureSize",pictureSize)
             .putInt("ev",ev).putInt("jpegQuality",jpegQuality)
@@ -102,11 +106,16 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     private Button button(String label) {
         Button b=new Button(this);
         b.setText(label);
-        b.setTextSize(12);
+        b.setTextSize(11);
         b.setTextColor(Color.WHITE);
         b.setAllCaps(false);
+        b.setSingleLine(true);
+        b.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        b.setGravity(Gravity.CENTER);
+        b.setMinimumWidth(0);
+        b.setMinimumHeight(0);
         b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(30,60,72)));
-        b.setPadding(1,0,1,0);
+        b.setPadding(2,0,2,0);
         return b;
     }
 
@@ -135,11 +144,14 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
 
         status=new TextView(this);
         status.setText("PHOTO  •  OK to shoot");
-        status.setTextColor(Color.WHITE);status.setTextSize(15);status.setGravity(Gravity.CENTER);
-        root.addView(status,new LinearLayout.LayoutParams(-1,35));
+        status.setTextColor(Color.WHITE);status.setTextSize(12);status.setGravity(Gravity.CENTER);
+        status.setSingleLine(true);
+        status.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        status.setPadding(8,0,8,0);
+        root.addView(status,new LinearLayout.LayoutParams(-1,42));
 
         LinearLayout proRow=new LinearLayout(this);
-        autoButton=button("4 AUTO");Button settingsButton=button("5 CAMERA SETTINGS");
+        autoButton=button("4 AUTO");Button settingsButton=button("5 SETTINGS");
         addButton(proRow,autoButton);addButton(proRow,settingsButton);
         root.addView(proRow,new LinearLayout.LayoutParams(-1,47));
         autoButton.setOnClickListener(new View.OnClickListener(){@Override public void onClick(View v){toggleManual();}});
@@ -219,6 +231,7 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
             if(!pictureSize.isEmpty()) for(Camera.Size s:p.getSupportedPictureSizes())
                 if(pictureSize.equals(s.width+"x"+s.height)) {picture=s;break;}
             if(picture!=null) p.setPictureSize(picture.width,picture.height);
+            p.setRotation(90);
             List<String> focus=p.getSupportedFocusModes();
             String continuous=mode==1?Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO:Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE;
             if(focus!=null && focus.contains(continuous)) p.setFocusMode(continuous);
@@ -273,7 +286,8 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     private void refreshStatus() {
         if(status==null || recordingVideo) return;
         String text=mode==0?"PHOTO":"VIDEO";
-        text+=manual?"  /  MANUAL  /  "+iso:"  /  AUTO  /  "+scene.toUpperCase(Locale.US);
+        if(manual) text+="  /  MANUAL  /  "+(iso.equals("auto")?"ISO AUTO":iso.replace("ISO","ISO "));
+        else text+="  /  AUTO"+(scene.equals("auto")?"":"  /  "+scene.toUpperCase(Locale.US));
         status.setText(text);
     }
 
@@ -316,8 +330,17 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         safeParameter("contrast",new ParameterEdit(){@Override public void change(Camera.Parameters p){if(p.get("contrast")!=null) p.set("contrast",manual?contrast:5);}});
         safeParameter("saturation",new ParameterEdit(){@Override public void change(Camera.Parameters p){if(p.get("saturation")!=null) p.set("saturation",manual?saturation:5);}});
         safeParameter("sharpness",new ParameterEdit(){@Override public void change(Camera.Parameters p){if(p.get("sharpness")!=null) p.set("sharpness",manual?sharpness:12);}});
-        Camera.Parameters checked=camera.getParameters();
-        android.util.Log.i("FlipCamSetting","iso="+checked.get("iso")+" ev="+checked.getExposureCompensation()+" wb="+checked.getWhiteBalance()+" focus="+checked.getFocusMode()+" scene="+checked.getSceneMode()+" contrast="+checked.get("contrast"));
+        safeParameter("metering",new ParameterEdit(){@Override public void change(Camera.Parameters p){
+            String wanted=manual?metering:"center-weighted";
+            String supported=p.get("auto-exposure-values");
+            if(supported!=null && (","+supported+",").contains(","+wanted+",")) p.set("auto-exposure",wanted);
+        }});
+        safeParameter("exposure lock",new ParameterEdit(){@Override public void change(Camera.Parameters p){
+            if(p.isAutoExposureLockSupported()) p.setAutoExposureLock(manual && aeLock);
+        }});
+        safeParameter("white balance lock",new ParameterEdit(){@Override public void change(Camera.Parameters p){
+            if(p.isAutoWhiteBalanceLockSupported()) p.setAutoWhiteBalanceLock(manual && awbLock);
+        }});
     }
 
     private void toggleManual() {
@@ -346,8 +369,8 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     private void pickIso(Camera.Parameters p) {
         String supported=p.get("iso-values");
         ArrayList<String> labels=new ArrayList<String>(), values=new ArrayList<String>();
-        if(supported!=null) for(String option:supported.split(",")) {
-            if(option.equals("auto") || option.matches("ISO[0-9]+")) {
+        if(supported!=null) for(String option:new String[]{"auto","ISO50","ISO100","ISO200","ISO400","ISO800","ISO1600","ISO3200"}) {
+            if((","+supported+",").contains(","+option+",")) {
                 values.add(option);
                 labels.add(option.equals("auto")?"Auto":option.replace("ISO","ISO "));
             }
@@ -381,6 +404,17 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
             if(p.getSupportedFocusModes().contains(Camera.Parameters.FOCUS_MODE_INFINITY)) {values.add("infinity");labels.add("Infinity / distance");}
         }
         choices("Focus",labels,values,new Selection(){@Override public void choose(String value){focus=value;}});
+    }
+
+    private void pickMetering(Camera.Parameters p) {
+        ArrayList<String> labels=new ArrayList<String>(),values=new ArrayList<String>();
+        String supported=p.get("auto-exposure-values");
+        for(String option:new String[]{"frame-average","center-weighted","spot-metering"}) {
+            if(supported!=null && (","+supported+",").contains(","+option+",")) {
+                values.add(option);labels.add(titleCase(option));
+            }
+        }
+        choices("Light metering",labels,values,new Selection(){@Override public void choose(String value){metering=value;}});
     }
 
     private void pickScene(Camera.Parameters p) {
@@ -443,6 +477,8 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         final String[] items=manual?
             new String[]{"ISO  •  "+iso,"Exposure  •  "+String.format(Locale.US,"%+.2f EV",ev*p.getExposureCompensationStep()),
                 "White balance  •  "+titleCase(whiteBalance),"Focus  •  "+titleCase(focus),
+                "Light metering  •  "+titleCase(metering),
+                "Exposure lock  •  "+(aeLock?"ON":"OFF"),"WB lock  •  "+(awbLock?"ON":"OFF"),
                 "Photo resolution","JPEG quality  •  "+jpegQuality+"%","Video resolution",
                 "Contrast  •  "+contrast,"Saturation  •  "+saturation,"Sharpness  •  "+sharpness}:
             new String[]{"Scene  •  "+titleCase(scene),"Photo resolution","JPEG quality  •  "+jpegQuality+"%","Video resolution"};
@@ -450,9 +486,12 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
             .setItems(items,new android.content.DialogInterface.OnClickListener(){@Override public void onClick(android.content.DialogInterface d,int which){
                 if(manual) switch(which) {
                     case 0:pickIso(p);break;case 1:pickEv(p);break;case 2:pickWhiteBalance(p);break;
-                    case 3:pickFocus(p);break;case 4:pickResolution(p);break;case 5:pickJpegQuality();break;
-                    case 6:pickVideoQuality();break;case 7:pickTone("contrast",p);break;
-                    case 8:pickTone("saturation",p);break;case 9:pickTone("sharpness",p);break;
+                    case 3:pickFocus(p);break;case 4:pickMetering(p);break;
+                    case 5:aeLock=!aeLock;savePreferences();applySettings();break;
+                    case 6:awbLock=!awbLock;savePreferences();applySettings();break;
+                    case 7:pickResolution(p);break;case 8:pickJpegQuality();break;
+                    case 9:pickVideoQuality();break;case 10:pickTone("contrast",p);break;
+                    case 11:pickTone("saturation",p);break;case 12:pickTone("sharpness",p);break;
                 } else switch(which) {
                     case 0:pickScene(p);break;case 1:pickResolution(p);break;
                     case 2:pickJpegQuality();break;case 3:pickVideoQuality();break;
@@ -513,6 +552,18 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     }
 
     private void takePhoto() {
+        if(camera==null || !resumed) {takingPicture=false;return;}
+        try {
+            String focusMode=camera.getParameters().getFocusMode();
+            if(Camera.Parameters.FOCUS_MODE_MACRO.equals(focusMode) || Camera.Parameters.FOCUS_MODE_AUTO.equals(focusMode)) {
+                camera.autoFocus(new Camera.AutoFocusCallback(){@Override public void onAutoFocus(boolean success,Camera source){
+                    captureJpeg();
+                }});
+            } else captureJpeg();
+        } catch(Exception e) {takingPicture=false;status.setText("Photo failed");}
+    }
+
+    private void captureJpeg() {
         if(camera==null || !resumed) {takingPicture=false;return;}
         try {
             camera.takePicture(null,null,new Camera.PictureCallback() {
