@@ -85,6 +85,7 @@ public final class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         if(deck!=null) {deck.page=PHOTO;deck.selected=0;deck.invalidate();}
+        if(intent!=null && intent.hasCategory(Intent.CATEGORY_HOME)) RecentsService.showRecents();
     }
 
     @Override protected void onResume() {

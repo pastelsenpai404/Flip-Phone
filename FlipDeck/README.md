@@ -1,5 +1,9 @@
 # Flip Deck
 
+## Recent apps button
+
+On the NP601SH, a short press of the End/Close key while Flip Deck is on screen now opens the phone's system recent-apps view. Use that view to switch to an app or dismiss its card. This uses the **Flip Deck recent apps** accessibility service; enable it in Settings > Accessibility after a fresh install. A long press still belongs to the phone's power controls.
+
 Launcher สำหรับ SHARP NP601SH (Android 5.1.1) ออกแบบให้ใช้ปุ่มกดได้โดยไม่ต้องแตะจอ
 
 - หน้าโชว์รูปเป็นหน้าแรก มีเพลง รูปภาพ และแอพทั้งหมดอยู่ด้านล่าง กด **\*** หรือปุ่มขึ้นเพื่อดูตารางทางลัด
