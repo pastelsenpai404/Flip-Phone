@@ -45,11 +45,12 @@ public final class RecentsService extends AccessibilityService {
 
     @Override protected boolean onKeyEvent(KeyEvent event) {
         int code=event.getKeyCode();
-        if(code==KeyEvent.KEYCODE_F2) {
+        if(code==KeyEvent.KEYCODE_F1 || code==KeyEvent.KEYCODE_F2) {
             if(inputPackages.contains(foregroundPackage)) return false;
-            if("dev.codex.flipbrowse".equals(foregroundPackage)) return false;
+            String target=code==KeyEvent.KEYCODE_F1?"dev.codex.flippost":"dev.codex.flipbrowse";
+            if(target.equals(foregroundPackage)) return false;
             if(event.getAction()==KeyEvent.ACTION_DOWN && event.getRepeatCount()==0) {
-                Intent browser=getPackageManager().getLaunchIntentForPackage("dev.codex.flipbrowse");
+                Intent browser=getPackageManager().getLaunchIntentForPackage(target);
                 if(browser==null) return false;
                 browser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try {startActivity(browser);} catch(Exception e) {return false;}

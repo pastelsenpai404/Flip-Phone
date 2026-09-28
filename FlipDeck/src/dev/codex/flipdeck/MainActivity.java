@@ -150,20 +150,32 @@ public class MainActivity extends Activity {
     private void unavailable(String label) {Toast.makeText(this,label+" unavailable",Toast.LENGTH_SHORT).show();}
 
     private void openPhone() {
-        if(!launchIntent(new Intent(Intent.ACTION_DIAL,Uri.parse("tel:")))) unavailable("Phone");
+        if(!launchDialer("")) unavailable("Phone");
+    }
+    private boolean launchDialer(String number) {
+        Intent intent=new Intent(Intent.ACTION_DIAL,Uri.fromParts("tel",number,null));
+        intent.setClassName("dev.codex.flipphone","dev.codex.flipphone.MainActivity");
+        if(launchIntent(intent)) return true;
+        intent.setComponent(null);
+        return launchIntent(intent);
     }
     private void dialFromKey(int code) {
         String digit=code==KeyEvent.KEYCODE_STAR?"*":code==KeyEvent.KEYCODE_POUND?"#":
             String.valueOf((char)('0'+code-KeyEvent.KEYCODE_0));
-        if(!launchIntent(new Intent(Intent.ACTION_DIAL,Uri.fromParts("tel",digit,null)))) unavailable("Phone");
+        if(!launchDialer(digit)) unavailable("Phone");
     }
     private void openMail() {
-        boolean ok=launchPackage("jp.co.sharp.android.messaging");
+        boolean ok=launchPackage("dev.codex.flippost");
+        if(!ok) ok=launchPackage("jp.co.sharp.android.messaging");
         if(!ok) ok=launchIntent(new Intent(Intent.ACTION_SENDTO,Uri.parse("smsto:")));
         if(!ok) unavailable("Messages");
     }
     private void openContacts() {
-        boolean ok=launchPackage("jp.co.sharp.android.addressbook.app");
+        Intent contacts=new Intent();
+        contacts.setClassName("dev.codex.flipphone","dev.codex.flipphone.MainActivity");
+        contacts.putExtra("tab",2);
+        boolean ok=launchIntent(contacts);
+        if(!ok) ok=launchPackage("jp.co.sharp.android.addressbook.app");
         if(!ok) ok=launchPackage("com.android.contacts");
         if(!ok) unavailable("Contacts");
     }
