@@ -168,7 +168,8 @@ public class MainActivity extends Activity {
         if(!ok) unavailable("Contacts");
     }
     private void openBrowser() {
-        boolean ok=launchPackage("com.android.browser");
+        boolean ok=launchPackage("dev.codex.flipbrowse");
+        if(!ok) ok=launchPackage("com.android.browser");
         if(!ok) ok=launchPackage("org.mozilla.firefox");
         if(!ok) unavailable("Browser");
     }
