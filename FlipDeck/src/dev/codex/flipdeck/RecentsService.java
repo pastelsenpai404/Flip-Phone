@@ -15,6 +15,11 @@ public final class RecentsService extends AccessibilityService {
     private String foregroundPackage="";
     private final HashSet<String> inputPackages=new HashSet<String>();
 
+    static boolean showNotifications() {
+        final RecentsService service=active;
+        return service!=null && service.performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS);
+    }
+
     static boolean showRecents() {
         final RecentsService service=active;
         if(service==null) return false;

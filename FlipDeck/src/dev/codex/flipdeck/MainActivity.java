@@ -149,6 +149,13 @@ public class MainActivity extends Activity {
 
     private void unavailable(String label) {Toast.makeText(this,label+" unavailable",Toast.LENGTH_SHORT).show();}
 
+    private void openNotifications() {
+        if(!RecentsService.showNotifications()) {
+            Toast.makeText(this,"Enable Flip Deck shortcuts in Accessibility",Toast.LENGTH_LONG).show();
+            launchIntent(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        }
+    }
+
     private void openPhone() {
         if(!launchDialer("")) unavailable("Phone");
     }
@@ -391,7 +398,7 @@ public class MainActivity extends Activity {
                 c.drawRoundRect(x,463,x+102,521,12,12,p);
                 text(c,dock[i],x+51,498,15,selected==i?BG:WHITE,true,Paint.Align.CENTER);
             }
-            text(c,"UP  GRID",18,544,11,ORANGE,true,Paint.Align.LEFT);
+            text(c,"UP  NOTIFICATIONS",18,544,11,ORANGE,true,Paint.Align.LEFT);
             text(c,"OK  OPEN",342,544,11,MINT,true,Paint.Align.RIGHT);
         }
 
@@ -576,7 +583,7 @@ public class MainActivity extends Activity {
             if(page==PHOTO) {
                 if(code==KeyEvent.KEYCODE_DPAD_LEFT) {selected=Math.max(0,selected-1);invalidate();return true;}
                 if(code==KeyEvent.KEYCODE_DPAD_RIGHT) {selected=Math.min(2,selected+1);invalidate();return true;}
-                if(code==KeyEvent.KEYCODE_DPAD_UP) {page=HOME;selected=0;invalidate();return true;}
+                if(code==KeyEvent.KEYCODE_DPAD_UP) {if(event.getRepeatCount()==0) openNotifications();return true;}
                 if(code==KeyEvent.KEYCODE_DPAD_DOWN) {if(event.getRepeatCount()==0) openContacts();return true;}
             }
             if(code==KeyEvent.KEYCODE_DPAD_UP) {selected=Math.max(0,selected-(page==ALL?1:3));invalidate();return true;}
@@ -598,7 +605,7 @@ public class MainActivity extends Activity {
             float x=e.getX()*360/getWidth(),y=e.getY()*560/getHeight();
             if(page==PHOTO) {
                 if(y>=463 && y<=521) {int index=(int)((x-17)/112);if(index>=0 && index<3) {selected=index;activate();}}
-                else if(y>521) {page=x<160?HOME:ALL;selected=0;if(page==ALL) refreshApps();invalidate();}
+                else if(y>521) {if(x<160) openNotifications();else {page=ALL;selected=0;refreshApps();invalidate();}}
                 else {page=HOME;selected=0;invalidate();}
                 return true;
             }
