@@ -25,7 +25,7 @@
 
 APK: [dist/Flip-Browse-NP601SH.apk](dist/Flip-Browse-NP601SH.apk)
 
-ต้องติดตั้ง FlipDeck รุ่นที่มีทางลัด Flip Browse ด้วย มีตัวรับปุ่มลูกโลกในบริการ Accessibility `Flip Deck shortcuts` ที่มีอยู่แล้วด้วย การรับปุ่มจากแอพอื่นขึ้นอยู่กับระบบของ SHARP หากบริการปิดอยู่ ปุ่มลูกโลกยังใช้งานได้จากหน้า Home ของ FlipDeck
+ต้องติดตั้ง FlipDeck รุ่นที่มีทางลัด Flip Browse ด้วย ปุ่มลูกโลก/F2 เปิด Flip Browse เฉพาะหน้า Home ของ FlipDeck และไม่ดักปุ่มจากแอพอื่น
 
 ## การตรวจบนเครื่อง
 

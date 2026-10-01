@@ -23,6 +23,7 @@
         <activity android:name=".QuickAppsActivity" android:label="Flip Deck Tasks" android:icon="@drawable/icon_bitmap" android:exported="true" android:excludeFromRecents="true" android:noHistory="true" android:theme="@android:style/Theme.NoDisplay">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
+        <activity android:name=".VoiceActivity" android:label="Voice Type" android:exported="false" android:screenOrientation="portrait" />
         <service android:name=".RecentsService" android:label="Flip Deck shortcuts" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true">
             <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/recents_service" />

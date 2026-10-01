@@ -282,7 +282,7 @@ public final class MainActivity extends Activity {
                     recipient.setSelection(recipient.length());
                 }return true;
             }
-            if((code==KeyEvent.KEYCODE_BACK||code==KeyEvent.KEYCODE_DEL)&&recipient.length()>0){
+            if(code==KeyEvent.KEYCODE_DEL&&recipient.length()>0){
                 if(event.getAction()==KeyEvent.ACTION_DOWN){String value=recipient.getText().toString();recipient.setText(event.getRepeatCount()>0?"":value.substring(0,value.length()-1));recipient.setSelection(recipient.length());}return true;
             }
             if(code==KeyEvent.KEYCODE_DPAD_CENTER||code==KeyEvent.KEYCODE_ENTER){if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0)body.requestFocus();return true;}

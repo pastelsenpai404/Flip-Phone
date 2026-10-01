@@ -36,6 +36,8 @@ Write-Host "Built $apk"
 if($Install) {
     & $adb install -r $apk
     if($LASTEXITCODE -ne 0) {throw 'Install failed'}
+    & $adb shell settings put system end_button_behavior 1
+    if($LASTEXITCODE -ne 0) {throw 'Setting End/Close to return Home failed'}
     & $adb shell am start -n 'dev.codex.flipdeck/.MainActivity'
     if($LASTEXITCODE -ne 0) {throw 'Launch failed'}
 }

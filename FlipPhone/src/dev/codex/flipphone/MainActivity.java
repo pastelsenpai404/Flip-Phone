@@ -249,7 +249,11 @@ public final class MainActivity extends Activity {
         }
         if(code==KeyEvent.KEYCODE_CALL){if(down&&event.getRepeatCount()==0)placeCall(menu==null?target():menuTarget);return true;}
         if(code==KeyEvent.KEYCODE_MENU){if(down&&event.getRepeatCount()==0){if(menu==null)showMenu(false);else{menu=null;view.invalidate();}}return true;}
-        if(code==KeyEvent.KEYCODE_BACK||code==KeyEvent.KEYCODE_DEL){
+        if(code==KeyEvent.KEYCODE_BACK){
+            if(down&&event.getRepeatCount()==0)onBackPressed();
+            return true;
+        }
+        if(code==KeyEvent.KEYCODE_DEL){
             if(down){if(menu!=null)menu=null;
                 else if(page==0&&number.length()>0)number=event.getRepeatCount()>0?"":number.substring(0,number.length()-1);
                 else if(page==2&&search.length()>0){search="";filterPeople();selected=0;}
@@ -270,6 +274,11 @@ public final class MainActivity extends Activity {
         return super.dispatchKeyEvent(event);
     }
     @Override public void onSaveInstanceState(Bundle state){state.putString("number",number);state.putInt("page",page);state.putString("search",search);super.onSaveInstanceState(state);}
+    @Override public void onBackPressed(){
+        if(menu!=null){menu=null;view.invalidate();}
+        else if(page!=0)setPage(0);
+        else super.onBackPressed();
+    }
     @Override protected void onDestroy(){destroyed=true;++generation;worker.shutdownNow();handler.removeCallbacksAndMessages(null);super.onDestroy();}
 
     private final class PhoneView extends View {

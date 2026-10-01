@@ -575,10 +575,16 @@ public class MainActivity extends Activity {
                 if(event.getRepeatCount()==0) dialFromKey(code);
                 return true;
             }
-            if(code==KeyEvent.KEYCODE_F1) {if(event.getRepeatCount()==0) openMail();return true;}
-            if(code==KeyEvent.KEYCODE_F2) {if(event.getRepeatCount()==0) openBrowser();return true;}
-            if(code==KeyEvent.KEYCODE_F3) {page=ALL;selected=0;refreshApps();invalidate();return true;}
-            if(code==KeyEvent.KEYCODE_F4 || code==KeyEvent.KEYCODE_CAMERA) {if(event.getRepeatCount()==0) openCamera();return true;}
+            if(code==KeyEvent.KEYCODE_F1 || code==KeyEvent.KEYCODE_F2 || code==KeyEvent.KEYCODE_F3 ||
+                code==KeyEvent.KEYCODE_F4 || code==KeyEvent.KEYCODE_CAMERA) {
+                if((page==PHOTO || page==HOME) && event.getRepeatCount()==0) {
+                    if(code==KeyEvent.KEYCODE_F1) openMail();
+                    else if(code==KeyEvent.KEYCODE_F2) openBrowser();
+                    else if(code==KeyEvent.KEYCODE_F3) startActivity(new Intent(MainActivity.this,VoiceActivity.class));
+                    else openCamera();
+                }
+                return true;
+            }
             if(code==KeyEvent.KEYCODE_CALL) {if(event.getRepeatCount()==0) openPhone();return true;}
             if(page==PHOTO) {
                 if(code==KeyEvent.KEYCODE_DPAD_LEFT) {selected=Math.max(0,selected-1);invalidate();return true;}
